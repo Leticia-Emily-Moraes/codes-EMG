@@ -15,9 +15,9 @@ Inclui scripts didáticos comentados com as etapas clássicas de processamento (
 - Facilitar a execução e visualização através de uma **aplicação com interface gráfica (Tkinter)**.
 - Tornar o ambiente de desenvolvimento **reproduzível** com a criação de um ambiente virtual isolado.
 
----
 
 ## 📁 Estrutura do Projeto
+
 ```
 codes-emg
 │
@@ -169,15 +169,17 @@ matplotlib
 
 O Tkinter é parte da biblioteca padrão do Python e não precisa de instalação extra (exceto em algumas distribuições Linux, onde pode ser necessário `sudo apt install python3-tk`).
 
----
+
 
 ## 🤝 Contribuição
+
 Este é um projeto educacional. Sugestões e melhorias são bem-vindas!
 Sinta-se à vontade para abrir issues ou pull requests.
 
----
 
 ## 📄 Licença
 Distribuído sob a licença MIT. Veja `LICENSE` para mais informações (se disponível).
+
+---
 
 Desenvolvido para fins de estudo e experimentação.
