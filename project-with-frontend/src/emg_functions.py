@@ -177,3 +177,66 @@ def filter_and_rectify(
     plt.close(fig)
 
     return time_axis, filtered_emg, rectified_emg
+
+
+def detect_onset_offset(
+    time_axis,
+    rectified_emg,
+    output_dir="output_images",
+    fs=1000,
+    threshold_std=3,
+    min_duration_sec=0.05,
+):
+    """
+    Detects burst onset/offset times in the rectified EMG signal.
+
+    Baseline noise level is estimated from the quietest 25% of the smoothed
+    envelope, and a burst is flagged wherever the envelope exceeds
+    baseline_mean + threshold_std * baseline_std for at least min_duration_sec.
+    Saves 'fig5.png' with the envelope, threshold and detected onset/offset markers.
+    Returns: onsets (list of times), offsets (list of times), envelope (array)
+    """
+    window = max(1, int(0.01 * fs))  # 10 ms smoothing window
+    envelope = np.convolve(rectified_emg, np.ones(window) / window, mode="same")
+
+    baseline_level = np.percentile(envelope, 25)
+    baseline_samples = envelope[envelope <= baseline_level]
+    threshold = baseline_samples.mean() + threshold_std * baseline_samples.std()
+
+    above_threshold = envelope > threshold
+    min_samples = int(min_duration_sec * fs)
+
+    onsets, offsets = [], []
+    i, n = 0, len(above_threshold)
+    while i < n:
+        if above_threshold[i]:
+            start = i
+            while i < n and above_threshold[i]:
+                i += 1
+            if (i - start) >= min_samples:
+                onsets.append(time_axis[start])
+                offsets.append(time_axis[i - 1])
+        else:
+            i += 1
+
+    # Figure 5 - envelope with threshold and onset/offset markers
+    fig = plt.figure()
+    plt.plot(time_axis, rectified_emg, label="Rectified EMG", alpha=0.5)
+    plt.plot(time_axis, envelope, label="Envelope", linewidth=1.5)
+    plt.axhline(threshold, color="red", linestyle="--", label="Threshold")
+    for onset in onsets:
+        plt.axvline(onset, color="green", linestyle="--")
+    for offset in offsets:
+        plt.axvline(offset, color="orange", linestyle="--")
+    plt.xlabel("Time (sec)")
+    plt.ylabel("EMG (a.u.)")
+    plt.title("Onset/Offset Detection")
+    plt.legend(loc="upper right")
+
+    os.makedirs(output_dir, exist_ok=True)
+    fig_name = os.path.join(output_dir, "fig5.png")
+    fig.set_size_inches(w=11, h=7)
+    fig.savefig(fig_name)
+    plt.close(fig)
+
+    return onsets, offsets, envelope

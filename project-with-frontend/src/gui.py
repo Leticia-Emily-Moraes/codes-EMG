@@ -9,7 +9,12 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 
 # Import the processing functions from the refactored module
-from emg_functions import generate_emg_signal, remove_mean_and_plot, filter_and_rectify
+from emg_functions import (
+    generate_emg_signal,
+    remove_mean_and_plot,
+    filter_and_rectify,
+    detect_onset_offset,
+)
 
 OUTPUT_DIR = "output_images"
 
@@ -26,7 +31,7 @@ class EmgApp:
     def __init__(self, root):
         self.root = root
         self.root.title("EMG Processing - Simulation and Filtering")
-        self.root.geometry("340x440")
+        self.root.geometry("340x500")
         self.root.resizable(False, False)
 
         # Variables used to store data between steps
@@ -35,6 +40,8 @@ class EmgApp:
         self.mean_corrected_emg = None
         self.filtered_emg = None
         self.rectified_emg = None
+        self.onsets = None
+        self.offsets = None
 
         # Filter settings (defaults match the original fixed 20-450 Hz band-pass)
         self.filter_type_var = tk.StringVar(value="Passa-banda")
@@ -90,6 +97,15 @@ class EmgApp:
             command=self.run_step3,
         )
         self.btn_step3.pack(pady=5)
+
+        self.btn_step4 = tk.Button(
+            main_frame,
+            text="4. Detect onset/offset",
+            height=2,
+            width=35,
+            command=self.run_step4,
+        )
+        self.btn_step4.pack(pady=5)
 
     def create_filter_settings(self, parent):
         """Filter selection panel: filter type, cutoff/notch frequencies and line color.
@@ -193,6 +209,7 @@ class EmgApp:
         self.btn_step1.config(state=state)
         self.btn_step2.config(state=state)
         self.btn_step3.config(state=state)
+        self.btn_step4.config(state=state)
 
     def show_error(self, msg):
         """Display an error message (modal)."""
@@ -290,6 +307,37 @@ class EmgApp:
         # Refresh already-open figures in place; open new windows only the first time
         self.show_plot_window("fig3.png")
         self.show_plot_window("fig4.png")
+
+    def run_step4(self):
+        if self.processing:
+            return
+        # Check whether step 3 has been executed
+        if self.time_axis is None or self.rectified_emg is None:
+            self.show_error("Run filtering and rectification first (Button 3).")
+            return
+        self.processing = True
+        self.set_buttons_state(tk.DISABLED)
+        threading.Thread(target=self._step4_thread, daemon=True).start()
+
+    def _step4_thread(self):
+        try:
+            onsets, offsets, _ = detect_onset_offset(
+                self.time_axis, self.rectified_emg, output_dir=OUTPUT_DIR
+            )
+            self.onsets = onsets
+            self.offsets = offsets
+            self.root.after(0, self._step4_done)
+        except Exception as e:
+            self.root.after(0, self._error_handler, f"Onset detection error: {e}")
+
+    def _step4_done(self):
+        self.processing = False
+        self.set_buttons_state(tk.NORMAL)
+        messagebox.showinfo(
+            "Completed",
+            f"Detected {len(self.onsets)} burst(s).\nFigure saved: 'fig5.png'.",
+        )
+        self.show_plot_window("fig5.png")
 
     def _error_handler(self, msg):
         self.processing = False
