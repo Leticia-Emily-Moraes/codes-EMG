@@ -29,14 +29,16 @@ codes-emg
 │ ├── fig3.png # Exemplo de saída do script 3
 │ └── fig4.png # Exemplo de saída do script 4
 │
-├── project-onset/ # (Opcional) Versão inicial do projeto
-│
 ├── project-with-frontend/ # Aplicação principal com interface gráfica
 │ ├── .spyproject/ # Configurações do Spyder (ambiente de desenvolvimento)
 │ ├── output_images/ # Pasta para salvar as imagens geradas pela interface
 │ ├── src/ # Código-fonte da aplicação (módulos, lógica, GUI)
+│ │ ├── emg_functions.py # Simulação, correção de média, filtragem/retificação e detecção de onset/offset
+│ │ └── gui.py # Interface Tkinter que integra as 4 etapas de processamento
 │ ├── venv/ # Ambiente virtual (criado pelo setup)
-│ └── setup-win.bat # Script para automação do ambiente no Windows
+│ ├── setup-win.bat # Script para automação do ambiente no Windows
+│ ├── setup-mac.sh # Script para automação do ambiente no macOS/Linux
+│ └── setup_env.py # Script Python multiplataforma (Windows/macOS/Linux)
 │
 ├── requirements.txt # Lista de dependências (numpy, scipy, matplotlib)
 └── README.md # Este arquivo
@@ -87,12 +89,14 @@ Os arquivos em `core-codes-with-coments/` são **independentes** e extremamente 
 
 ## 🖥️ Aplicação com Frontend (`project-with-frontend/`)
 
-A pasta `src/` contém um programa em **Tkinter** que integra todas as funcionalidades acima:
+A pasta `src/` contém um programa em **Tkinter** que integra todas as funcionalidades acima em 4 etapas:
 
-- Interface amigável para selecionar arquivos de dados EMG.
-- Botões para executar cada análise (burst, média corrigida, filtragem/retificação).
-- Visualização dos gráficos diretamente na interface.
-- Opção de salvar as figuras na pasta `output_images/`.
+1. **Simular e plotar o EMG bruto** — gera um sinal simulado com bursts de ativação.
+2. **Remover a média (correção de offset)** — remove o componente DC do sinal.
+3. **Filtrar e retificar** — painel de configurações permite escolher o tipo de filtro (passa-baixa, passa-alta, passa-banda ou notch), as frequências de corte/rejeição e a cor da linha do gráfico; alterar qualquer configuração reaplica o filtro automaticamente se a etapa 3 já tiver sido executada.
+4. **Detectar onset/offset** — identifica os instantes de início e fim de cada burst muscular a partir do envelope do sinal retificado, plotando os marcadores sobre o sinal (`fig5.png`).
+
+Todos os gráficos são exibidos diretamente na interface e salvos na pasta `output_images/`.
 
 ---
 
@@ -113,6 +117,34 @@ A pasta `src/` contém um programa em **Tkinter** que integra todas as funcional
     ```
 
 > 💡 *Na primeira execução, o script pode demorar um pouco pois irá baixar os pacotes. Nas próximas vezes, a abertura será instantânea.*
+
+---
+
+### 🍎 Usando o `setup-mac.sh` (macOS/Linux)
+
+1. Navegue até a pasta `project-with-frontend/`.
+2. Dê permissão de execução (apenas na primeira vez):
+   ```bash
+   chmod +x setup-mac.sh
+   ```
+3. Execute o script:
+   ```bash
+   ./setup-mac.sh
+   ```
+   Ele cria o `venv`, instala as dependências e já abre a interface gráfica (`src/gui.py`) ao final.
+
+---
+
+### 🐍 Alternativa multiplataforma (`setup_env.py`)
+
+Funciona igual em Windows, macOS ou Linux — o script detecta o sistema operacional e usa o caminho correto do `venv`:
+
+```bash
+cd project-with-frontend
+python setup_env.py
+```
+
+Esse script só configura o ambiente (cria o `venv` e instala as dependências); depois, rode a interface manualmente com `python src/gui.py`.
 
 ---
 
