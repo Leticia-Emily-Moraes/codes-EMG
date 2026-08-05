@@ -76,16 +76,46 @@ def remove_mean_and_plot(time_axis, emg_signal, output_dir="output_images"):
     return time_axis, mean_corrected_emg
 
 
-def filter_and_rectify(time_axis, mean_corrected_emg, output_dir="output_images"):
+def design_filter(filter_type, low_cutoff, high_cutoff, notch_freq, fs=1000, order=4):
     """
-    Butterworth band-pass filtering and rectification (original Script 3).
+    Builds the (b, a) coefficients for the requested filter type.
+
+    filter_type: "lowpass", "highpass", "bandpass" or "notch"
+    low_cutoff / high_cutoff: cutoff frequencies in Hz (used depending on filter_type)
+    notch_freq: frequency in Hz to reject (used only when filter_type == "notch")
+    """
+    nyq = fs / 2
+
+    if filter_type == "lowpass":
+        return sp_signal.butter(order, high_cutoff / nyq, btype="lowpass")
+    elif filter_type == "highpass":
+        return sp_signal.butter(order, low_cutoff / nyq, btype="highpass")
+    elif filter_type == "bandpass":
+        return sp_signal.butter(order, [low_cutoff / nyq, high_cutoff / nyq], btype="bandpass")
+    elif filter_type == "notch":
+        return sp_signal.iirnotch(notch_freq / nyq, Q=30)
+    else:
+        raise ValueError(f"Unknown filter_type: {filter_type}")
+
+
+def filter_and_rectify(
+    time_axis,
+    mean_corrected_emg,
+    output_dir="output_images",
+    filter_type="bandpass",
+    low_cutoff=20,
+    high_cutoff=450,
+    notch_freq=60,
+    fs=1000,
+    line_color="tab:blue",
+):
+    """
+    Filters and rectifies the EMG signal (original Script 3, now with a
+    selectable filter: low-pass, high-pass, band-pass or notch).
     Saves 'fig3.png' (filtered vs unfiltered) and 'fig4.png' (rectified vs unrectified).
     Returns: time, emg_filtered, emg_rectified
     """
-    # Filter parameters (identical)
-    high = 20 / (1000 / 2)
-    low = 450 / (1000 / 2)
-    b, a = sp_signal.butter(4, [high, low], btype="bandpass")
+    b, a = design_filter(filter_type, low_cutoff, high_cutoff, notch_freq, fs=fs)
 
     # Filter application (filtfilt, identical)
     filtered_emg = sp_signal.filtfilt(b, a, mean_corrected_emg)
@@ -94,7 +124,7 @@ def filter_and_rectify(time_axis, mean_corrected_emg, output_dir="output_images"
     fig = plt.figure()
     plt.subplot(1, 2, 1)
     plt.subplot(1, 2, 1).set_title("Unfiltered EMG")
-    plt.plot(time_axis, mean_corrected_emg)
+    plt.plot(time_axis, mean_corrected_emg, color=line_color)
     plt.locator_params(axis="x", nbins=4)
     plt.locator_params(axis="y", nbins=4)
     plt.ylim(-1.5, 1.5)
@@ -103,7 +133,7 @@ def filter_and_rectify(time_axis, mean_corrected_emg, output_dir="output_images"
 
     plt.subplot(1, 2, 2)
     plt.subplot(1, 2, 2).set_title("Filtered EMG")
-    plt.plot(time_axis, filtered_emg)
+    plt.plot(time_axis, filtered_emg, color=line_color)
     plt.locator_params(axis="x", nbins=4)
     plt.locator_params(axis="y", nbins=4)
     plt.ylim(-1.5, 1.5)
@@ -124,7 +154,7 @@ def filter_and_rectify(time_axis, mean_corrected_emg, output_dir="output_images"
     fig = plt.figure()
     plt.subplot(1, 2, 1)
     plt.subplot(1, 2, 1).set_title("Unrectified EMG")
-    plt.plot(time_axis, filtered_emg)
+    plt.plot(time_axis, filtered_emg, color=line_color)
     plt.locator_params(axis="x", nbins=4)
     plt.locator_params(axis="y", nbins=4)
     plt.ylim(-1.5, 1.5)
@@ -133,7 +163,7 @@ def filter_and_rectify(time_axis, mean_corrected_emg, output_dir="output_images"
 
     plt.subplot(1, 2, 2)
     plt.subplot(1, 2, 2).set_title("Rectified EMG")
-    plt.plot(time_axis, rectified_emg)
+    plt.plot(time_axis, rectified_emg, color=line_color)
     plt.locator_params(axis="x", nbins=4)
     plt.locator_params(axis="y", nbins=4)
     plt.ylim(-1.5, 1.5)
